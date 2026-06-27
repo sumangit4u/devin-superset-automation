@@ -1,0 +1,20 @@
+services:
+  automation:
+    build: .
+    image: devin-superset-automation:latest
+    ports:
+      - "8000:8000"
+    environment:
+      # Leave DEVIN_API_KEY empty to run in SIMULATE mode automatically.
+      DEVIN_API_KEY: "${DEVIN_API_KEY:-}"
+      DEVIN_API_BASE: "${DEVIN_API_BASE:-https://api.devin.ai/v1}"
+      GITHUB_TOKEN: "${GITHUB_TOKEN:-}"
+      GITHUB_WEBHOOK_SECRET: "${GITHUB_WEBHOOK_SECRET:-}"
+      TARGET_REPO: "${TARGET_REPO:-sumangit4u/superset}"
+      TRIGGER_LABEL: "${TRIGGER_LABEL:-devin-fix}"
+      SIMULATE: "${SIMULATE:-false}"
+      POLL_INTERVAL_SECONDS: "${POLL_INTERVAL_SECONDS:-15}"
+      DB_PATH: "/app/data/runs.db"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
