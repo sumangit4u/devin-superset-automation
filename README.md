@@ -74,15 +74,47 @@ so `docker compose up` always gives you a working demo.
 
 ### Trigger it
 
-Point a GitHub webhook (`Settings → Webhooks`, content-type `application/json`,
-event = *Issues*, secret = `GITHUB_WEBHOOK_SECRET`) at
-`https://<your-host>/webhook`. Then label any issue `devin-fix`.
+#### Option 1 — Real GitHub webhook via Cloudflare Tunnel (live, end-to-end)
 
-Or, without configuring GitHub, replay a sample event against a running server:
+GitHub can't reach `localhost`, so expose the running service with a public
+tunnel. Cloudflare's quick tunnel needs no account:
 
 ```bash
-python scripts/trigger.py 123 "SQL injection in user_lookup.py"
+# in a separate terminal, with `docker compose up` already running
+cloudflared tunnel --url http://localhost:8000
 ```
+
+It prints a public URL, e.g. `https://random-words.trycloudflare.com`. Then on
+your fork: **Settings → Webhooks → Add webhook**
+
+| Field | Value |
+|-------|-------|
+| Payload URL | `https://random-words.trycloudflare.com/webhook` |
+| Content type | `application/json` |
+| Secret | leave blank, **or** set the same value as `GITHUB_WEBHOOK_SECRET` in `.env` |
+| Which events? | "Let me select" → **Issues** only |
+
+GitHub sends a `ping` on save (the app replies `200` → green check). Now create
+an issue and apply the **`devin-fix`** label — that fires the event through the
+tunnel to `/webhook`, the orchestrator starts a Devin session, and you watch it
+on `http://localhost:8000/dashboard`.
+
+> The quick-tunnel URL changes each time `cloudflared` restarts — update the
+> webhook's Payload URL if you restart it, and keep the tunnel running for the
+> whole demo. (`ngrok http 8000` works identically if you prefer ngrok.)
+
+To file the labeled issues automatically, see `scripts/create_issues_real.sh`
+(real Superset code) or `scripts/create_issues.sh` (sandbox modules).
+
+#### Option 2 — Local trigger, no tunnel (fastest for rehearsal)
+
+Replay the identical event straight at the running server — GitHub not required:
+
+```bash
+python scripts/trigger.py 123 "SQL injection in automation-sandbox/user_lookup.py"
+```
+
+Everything downstream (Devin session, PR, dashboard) is the same as Option 1.
 
 ## Configuration
 
